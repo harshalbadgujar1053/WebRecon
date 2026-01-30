@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from recon.crawl_rules import get_crawl_rules
 from recon.redirects import get_redirect_chain
 from recon.security_txt import get_security_txt
+from recon.page_analysis import analyze_page
+from recon.dns_security import check_dnssec, get_email_security
+from recon.infra_intel import detect_firewall, get_tech_stack, get_archive_history, get_global_ranking
 
 
 app = FastAPI(
@@ -57,5 +60,14 @@ def full_scan(domain: str):
 
         "crawl_rules": get_crawl_rules(domain),
         "redirect_chain": get_redirect_chain(domain),
-        "security_txt": get_security_txt(domain)
+        "security_txt": get_security_txt(domain),
+
+        "page_analysis": analyze_page(domain),
+        "dns_security": check_dnssec(domain),
+        "email_configuration": get_email_security(domain),
+        "firewall_detection": detect_firewall(domain),
+        "tech_stack": get_tech_stack(domain),
+        "archive_history": get_archive_history(domain),
+        "global_ranking": get_global_ranking(domain),
+
     }
