@@ -1,23 +1,109 @@
+/* ---------- GLOBAL ---------- */
 body {
-    font-family: Arial, sans-serif;
-    background: white;
-    color: black;
-    padding: 40px;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #ffffff;
+    color: #111;
+    margin: 30px;
 }
 
-input {
-    padding: 8px;
-    width: 250px;
+h1 {
+    margin-bottom: 5px;
+}
+
+p {
+    margin-top: 0;
+    color: #444;
+}
+
+hr {
+    margin: 30px 0;
+    border: none;
+    border-top: 1px solid #ddd;
+}
+
+/* ---------- INPUT ---------- */
+input[type="text"] {
+    width: 320px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+}
+
+/* ---------- BUTTONS ---------- */
+.buttons {
+    margin-top: 15px;
 }
 
 button {
-    padding: 8px 16px;
+    padding: 10px 16px;
+    font-size: 15px;
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
+    background-color: #1f6feb;
+    color: white;
+    margin-right: 10px;
 }
 
+button:hover {
+    opacity: 0.9;
+}
+
+button.danger {
+    background-color: #d32f2f;
+}
+
+/* ---------- STATUS TEXT ---------- */
+#activeStatus {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* ---------- TABLE (PORT SCAN) ---------- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+table th,
+table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+
+table th {
+    background-color: #f3f3f3;
+}
+
+/* ---------- CODE / JSON BLOCK ---------- */
 pre {
-    margin-top: 20px;
-    background: #f4f4f4;
-    padding: 15px;
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    padding: 12px;
     overflow-x: auto;
+    max-height: 400px;
+    font-size: 13px;
+}
+
+/* ---------- SECTIONS ---------- */
+h2 {
+    margin-top: 40px;
+}
+
+h3 {
+    margin-top: 25px;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 768px) {
+    input[type="text"] {
+        width: 100%;
+    }
+
+    button {
+        margin-bottom: 10px;
+    }
 }

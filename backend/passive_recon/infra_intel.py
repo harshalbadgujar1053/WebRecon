@@ -1,5 +1,5 @@
 import requests
-from builtwith import builtwith
+from builtwith import builtwith # type: ignore
 
 def detect_firewall(domain: str):
     try:

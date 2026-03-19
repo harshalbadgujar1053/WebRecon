@@ -7,14 +7,59 @@
 </head>
 <body>
 
-    <h1>WebRecon</h1>
-    <p>OSINT-Based Website Security Analyzer</p>
+<h1>WebRecon</h1>
+<p>Website Security Analyzer</p>
 
-    <input type="text" id="domain" placeholder="example.com">
-    <button onclick="scanWebsite()">Scan</button>
+<input type="text" id="domain" placeholder="example.com">
 
-    <pre id="result"></pre>
+<div class="buttons">
+    <button onclick="runPassiveScan()">Run Passive Scan</button>
+    <button class="danger" onclick="runActiveScan()">Run Active Scan</button>
+</div>
 
-    <script src="script.js"></script>
+<hr>
+
+<h2>Passive Recon Results</h2>
+<pre id="passiveResult">No scan performed yet.</pre>
+
+<hr>
+
+<h2>Active Recon Results</h2>
+<p id="activeStatus">No active scan performed yet.</p>
+
+<!-- PORT SCAN -->
+<h3>Open Ports</h3>
+<table id="portsTable">
+    <thead>
+        <tr>
+            <th>Port</th>
+            <th>Protocol</th>
+            <th>Service</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">No data</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- SUBDOMAINS -->
+<h3>Discovered Subdomains</h3>
+<pre id="subdomainResult">No data</pre>
+
+<!-- DIRECTORIES -->
+<h3>Discovered Directories</h3>
+<pre id="directoryResult">No data</pre>
+
+<!-- API DISCOVERY -->
+<h3>API Endpoints</h3>
+<pre id="apiResult">No data</pre>
+
+<!-- API SUBDOMAIN DISCOVERY -->
+<h3>API Subdomains</h3>
+<pre id="apiSubdomainResult">No data</pre>
+
+<script src="script.js"></script>
 </body>
 </html>

@@ -20,4 +20,4 @@ def get_redirect_chain(domain: str):
         return chain
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e)}  
