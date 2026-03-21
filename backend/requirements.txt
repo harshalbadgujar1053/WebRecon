@@ -1,8 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 requests
 python-whois
 dnspython
 beautifulsoup4
 builtwith
-
+tldextract
+python-dateutil
+python-dotenv

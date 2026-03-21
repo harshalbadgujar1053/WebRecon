@@ -1,65 +1,969 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>WebRecon</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SyknetScope — Web Recon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────
+   ROOT + RESET
+───────────────────────────────────────────── */
+:root {
+  --bg:          #060a0f;
+  --bg-surface:  #0b1117;
+  --bg-card:     #0d1520;
+  --border:      #1a2a3a;
+  --border-glow: #0f4c75;
+  --green:       #00ff9f;
+  --green-dim:   #007a4d;
+  --green-faint: #00ff9f18;
+  --cyan:        #00cfff;
+  --cyan-dim:    #006d88;
+  --amber:       #ffa62b;
+  --red:         #ff3b5c;
+  --red-dim:     #4a0010;
+  --purple:      #bd5fff;
+  --text-primary:#c8d8e8;
+  --text-dim:    #4a6880;
+  --text-label:  #6a8aa8;
+  --font:        'JetBrains Mono','Share Tech Mono',monospace;
+  --radius:      4px;
+  --glow-g:      0 0 8px #00ff9f55, 0 0 20px #00ff9f22;
+  --glow-c:      0 0 8px #00cfff44, 0 0 20px #00cfff11;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--bg);color:var(--text-primary);min-height:100vh;overflow-x:hidden;line-height:1.6;}
+
+/* ─────────────────────────────────────────────
+   CRT OVERLAY
+───────────────────────────────────────────── */
+.scanline{position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);}
+.noise{position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px 200px;}
+
+/* ─────────────────────────────────────────────
+   HEADER
+───────────────────────────────────────────── */
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 32px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0a1520,var(--bg));position:sticky;top:0;z-index:100;backdrop-filter:blur(4px);}
+.logo{font-family:'Share Tech Mono',monospace;font-size:1.5rem;font-weight:700;letter-spacing:.1em;}
+.logo-bracket{color:var(--text-dim);}
+.logo-text{color:var(--green);text-shadow:var(--glow-g);}
+.logo-accent{color:var(--cyan);text-shadow:var(--glow-c);}
+.tagline{font-size:.7rem;color:var(--text-dim);margin-top:2px;letter-spacing:.05em;}
+.header-right{display:flex;align-items:center;gap:24px;font-size:.72rem;color:var(--text-dim);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:var(--glow-g);animation:blink 2s ease-in-out infinite;display:inline-block;margin-right:6px;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.clock{color:var(--cyan);letter-spacing:.1em;font-size:.75rem;}
+
+/* ─────────────────────────────────────────────
+   MAIN
+───────────────────────────────────────────── */
+main{max-width:1300px;margin:0 auto;padding:32px 24px;}
+
+/* ─────────────────────────────────────────────
+   SCAN PANEL
+───────────────────────────────────────────── */
+.scan-panel{background:var(--bg-surface);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:var(--radius);padding:24px 28px;margin-bottom:36px;position:relative;overflow:hidden;}
+.scan-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--green),transparent);}
+.terminal-prompt{font-size:.78rem;margin-bottom:14px;letter-spacing:.05em;}
+.prompt-prefix{color:var(--green);}
+.prompt-cmd{color:var(--cyan);}
+.input-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.input-wrapper{flex:1;min-width:260px;display:flex;align-items:center;background:var(--bg);border:1px solid var(--border-glow);border-radius:var(--radius);padding:0 14px;gap:10px;transition:border-color .2s,box-shadow .2s;}
+.input-wrapper:focus-within{border-color:var(--green);box-shadow:0 0 0 2px var(--green-faint),var(--glow-g);}
+.input-prefix{color:var(--green);font-size:.9rem;}
+input[type=text]{flex:1;background:transparent;border:none;outline:none;color:var(--green);font-family:var(--font);font-size:1rem;padding:12px 0;caret-color:var(--green);letter-spacing:.03em;}
+input::placeholder{color:var(--text-dim);}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;}
+.btn{font-family:var(--font);font-size:.78rem;font-weight:700;letter-spacing:.12em;padding:12px 20px;border:1px solid;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;background:transparent;}
+.btn-passive{color:var(--green);border-color:var(--green-dim);}
+.btn-passive:hover{background:var(--green-faint);border-color:var(--green);box-shadow:var(--glow-g);}
+.btn-active{color:var(--amber);border-color:#7a4e00;}
+.btn-active:hover{background:#ffa62b18;border-color:var(--amber);box-shadow:0 0 8px #ffa62b44;}
+
+/* ─────────────────────────────────────────────
+   MODULE SECTION HEADER
+───────────────────────────────────────────── */
+.modules-section{margin-bottom:40px;}
+.modules-header{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.modules-title{font-family:'Share Tech Mono',monospace;font-size:.72rem;font-weight:700;letter-spacing:.2em;color:var(--text-dim);white-space:nowrap;}
+.modules-title span{color:var(--green);}
+.modules-divider{flex:1;height:1px;background:linear-gradient(90deg,var(--border-glow),transparent);}
+.modules-count{font-size:.65rem;color:var(--text-dim);letter-spacing:.1em;border:1px solid var(--border);padding:2px 8px;border-radius:2px;white-space:nowrap;}
+
+/* ─────────────────────────────────────────────
+   FILTER TABS
+───────────────────────────────────────────── */
+.module-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.module-tab{font-family:var(--font);font-size:.68rem;font-weight:700;letter-spacing:.1em;padding:6px 16px;border:1px solid var(--border);border-radius:2px;background:transparent;color:var(--text-dim);cursor:pointer;transition:all .15s;}
+.module-tab:hover{border-color:var(--border-glow);color:var(--text-primary);}
+.tab-all{color:var(--text-primary);border-color:var(--text-dim);background:#ffffff08;}
+.tab-passive{color:var(--green);border-color:var(--green-dim);background:var(--green-faint);}
+.tab-active-r{color:var(--amber);border-color:#7a4e00;background:#ffa62b0d;}
+
+/* ─────────────────────────────────────────────
+   MODULE GRID
+───────────────────────────────────────────── */
+.modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:12px;}
+
+/* ─────────────────────────────────────────────
+   MODULE CARD
+───────────────────────────────────────────── */
+.module-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px 14px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s,transform .2s,box-shadow .2s;animation:cardIn .4s ease both;}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* left accent bar */
+.module-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;}
+.mc-passive::before{background:var(--green-dim);}
+.mc-active::before{background:#7a4e00;}
+
+/* top glow line on hover */
+.module-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:transparent;transition:background .2s;}
+.mc-passive:hover::after{background:linear-gradient(90deg,var(--green),transparent);}
+.mc-active:hover::after{background:linear-gradient(90deg,var(--amber),transparent);}
+
+/* scanline sweep */
+.mc-sweep{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 0%,rgba(0,255,159,.04) 50%,transparent 100%);transform:translateY(-100%);}
+.mc-active .mc-sweep{background:linear-gradient(180deg,transparent 0%,rgba(255,166,43,.04) 50%,transparent 100%);}
+.module-card:hover .mc-sweep{animation:sweep .55s ease forwards;}
+@keyframes sweep{from{transform:translateY(-100%)}to{transform:translateY(100%)}}
+
+.mc-passive:hover{transform:translateY(-3px);border-color:var(--green-dim);box-shadow:0 8px 28px rgba(0,255,159,.1);}
+.mc-active:hover{transform:translateY(-3px);border-color:#7a4e00;box-shadow:0 8px 28px rgba(255,166,43,.1);}
+
+.mc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.mc-icon{font-size:1.2rem;line-height:1;}
+.mc-badge{font-size:.55rem;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:2px;border:1px solid;text-transform:uppercase;}
+.mcb-passive{color:var(--green);border-color:var(--green-dim);background:var(--green-faint);}
+.mcb-active{color:var(--amber);border-color:#7a4e00;background:#ffa62b0d;}
+
+.mc-title{font-size:.8rem;font-weight:700;letter-spacing:.06em;color:var(--text-primary);margin-bottom:4px;line-height:1.3;}
+.mc-label{font-size:.62rem;color:var(--text-dim);letter-spacing:.05em;}
+
+/* ─────────────────────────────────────────────
+   MODAL
+───────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(6,10,15,.9);backdrop-filter:blur(7px);z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;animation:overlayIn .18s ease both;}
+@keyframes overlayIn{from{opacity:0}to{opacity:1}}
+.modal-box{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:var(--radius);padding:28px;max-width:540px;width:100%;position:relative;overflow:hidden;animation:modalIn .25s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes modalIn{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* top accent */
+.modal-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.modal-passive::before{background:linear-gradient(90deg,var(--green),transparent);}
+.modal-active::before{background:linear-gradient(90deg,var(--amber),transparent);}
+
+/* corner brackets */
+.mc-br{position:absolute;width:10px;height:10px;border-color:var(--border-glow);border-style:solid;border-width:0;}
+.mc-br.tl{top:8px;left:8px;border-top-width:1px;border-left-width:1px;}
+.mc-br.tr{top:8px;right:8px;border-top-width:1px;border-right-width:1px;}
+.mc-br.bl{bottom:8px;left:8px;border-bottom-width:1px;border-left-width:1px;}
+.mc-br.br{bottom:8px;right:8px;border-bottom-width:1px;border-right-width:1px;}
+
+.modal-close{position:absolute;top:13px;right:13px;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font);font-size:.7rem;padding:3px 9px;border-radius:2px;cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+
+.modal-head{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.modal-icon-big{font-size:1.9rem;line-height:1;}
+.modal-head-text{display:flex;flex-direction:column;gap:5px;}
+.modal-title{font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;letter-spacing:.08em;color:var(--text-primary);}
+.modal-badge-pill{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:2px 9px;border-radius:2px;border:1px solid;width:fit-content;}
+.mbp-passive{color:var(--green);border-color:var(--green-dim);background:var(--green-faint);}
+.mbp-active{color:var(--amber);border-color:#7a4e00;background:#ffa62b0d;}
+
+.modal-div{height:1px;background:var(--border);margin:0 0 15px;}
+
+.mlabel{font-size:.6rem;color:var(--text-dim);letter-spacing:.16em;text-transform:uppercase;margin-bottom:7px;}
+.modal-desc{font-size:.81rem;color:var(--text-primary);line-height:1.8;margin-bottom:15px;}
+
+.modal-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.m-tag{font-size:.6rem;padding:3px 9px;border-radius:2px;border:1px solid var(--border);color:var(--text-dim);letter-spacing:.05em;background:#ffffff04;}
+
+.modal-out{background:#040810;border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;font-size:.72rem;color:var(--green);line-height:1.75;font-family:var(--font);white-space:pre;}
+.modal-out.amber{color:var(--amber);}
+
+/* ─────────────────────────────────────────────
+   RESULTS / CARDS GRID (scan output)
+───────────────────────────────────────────── */
+.hidden{display:none!important;}
+.target-banner{display:flex;align-items:center;flex-wrap:wrap;gap:10px;background:#0a1a28;border:1px solid var(--border-glow);border-radius:var(--radius);padding:10px 20px;margin-bottom:16px;font-size:.78rem;letter-spacing:.07em;}
+.tb-label{color:var(--text-dim);}
+.tb-domain{color:var(--cyan);font-weight:700;font-size:.88rem;text-shadow:var(--glow-c);}
+.tb-type{color:var(--amber);}
+.tb-time{color:var(--text-dim);}
+.tb-sep{color:var(--border);margin:0 4px;}
+
+.export-panel{display:flex;align-items:center;gap:16px;background:#080f18;border:1px solid var(--border-glow);border-left:3px solid var(--cyan);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;flex-wrap:wrap;}
+.export-label{display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:700;letter-spacing:.12em;color:var(--text-dim);white-space:nowrap;}
+.export-btns{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-export{font-family:var(--font);font-size:.7rem;font-weight:700;letter-spacing:.1em;padding:7px 14px;border:1px solid;border-radius:var(--radius);cursor:pointer;background:transparent;display:flex;align-items:center;gap:7px;transition:all .15s;}
+.export-hint{font-size:.56rem;opacity:.55;letter-spacing:.03em;}
+.bex-pdf{color:#ff6b6b;border-color:#5a1a1a;}
+.bex-pdf:hover{background:#ff6b6b18;border-color:#ff6b6b;}
+.bex-json{color:var(--amber);border-color:#7a4e00;}
+.bex-json:hover{background:#ffa62b18;border-color:var(--amber);}
+.bex-csv{color:var(--green);border-color:var(--green-dim);}
+.bex-csv:hover{background:var(--green-faint);border-color:var(--green);}
+.bex-txt{color:var(--cyan);border-color:var(--cyan-dim);}
+.bex-txt:hover{background:#00cfff12;border-color:var(--cyan);}
+
+.risk-banner{display:flex;align-items:center;gap:12px;padding:12px 20px;border-radius:var(--radius);margin-bottom:20px;border-left:3px solid;font-size:.82rem;flex-wrap:wrap;}
+.risk-low{background:#001a0e;border-color:var(--green);}
+.risk-medium{background:#1a1000;border-color:var(--amber);}
+.risk-high{background:var(--red-dim);border-color:var(--red);}
+.risk-level{font-weight:700;font-size:.9rem;letter-spacing:.1em;}
+.risk-sep{color:var(--text-dim);}
+
+.cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media(max-width:900px){.cards-grid{grid-template-columns:1fr;}}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s;animation:cardIn .3s ease both;}
+.card:hover{border-color:var(--border-glow);}
+.card.wide{grid-column:1/-1;}
+.card-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#0a1520;border-bottom:1px solid var(--border);font-size:.72rem;font-weight:700;letter-spacing:.12em;color:var(--text-dim);}
+.card-icon{color:var(--green);font-size:.85rem;}
+.card-status{margin-left:auto;font-size:.63rem;padding:2px 8px;border-radius:2px;border:1px solid;}
+.cs-ok{color:var(--green);border-color:var(--green-dim);background:var(--green-faint);}
+.cs-warn{color:var(--amber);border-color:#7a4e00;background:#ffa62b12;}
+.cs-err{color:var(--red);border-color:var(--red-dim);background:#ff3b5c12;}
+.cs-loading{color:var(--cyan);border-color:var(--cyan-dim);background:#00cfff12;}
+.card-body{padding:14px 16px;font-size:.78rem;}
+
+.kv-row{display:flex;align-items:flex-start;gap:12px;padding:5px 0;border-bottom:1px solid #0d1a25;}
+.kv-row:last-child{border-bottom:none;}
+.kv-key{color:var(--text-label);min-width:140px;flex-shrink:0;font-size:.72rem;letter-spacing:.05em;padding-top:1px;}
+.kv-val{color:var(--text-primary);word-break:break-all;flex:1;}
+.v-green{color:var(--green)!important;}
+.v-red{color:var(--red)!important;}
+.v-amber{color:var(--amber)!important;}
+.v-cyan{color:var(--cyan)!important;}
+.v-dim{color:var(--text-dim);font-style:italic;}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:2px;font-size:.67rem;letter-spacing:.07em;margin:2px 3px 2px 0;border:1px solid;}
+.tg-cyan{color:var(--cyan);border-color:var(--cyan-dim);background:#00cfff0d;}
+.tg-green{color:var(--green);border-color:var(--green-dim);background:var(--green-faint);}
+.tg-amber{color:var(--amber);border-color:#7a4e00;background:#ffa62b0d;}
+
+.sec-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #0d1a25;font-size:.73rem;}
+.sec-row:last-child{border-bottom:none;}
+.sec-name{color:var(--text-label);font-size:.69rem;}
+
+.port-wrap{overflow-x:auto;margin-top:8px;}
+table{width:100%;border-collapse:collapse;font-size:.74rem;}
+thead tr{border-bottom:1px solid var(--border-glow);}
+th{padding:8px 12px;text-align:left;color:var(--text-dim);font-weight:700;letter-spacing:.1em;font-size:.67rem;}
+td{padding:6px 12px;border-bottom:1px solid var(--border);}
+tr:hover td{background:#0a1520;}
+.td-port{color:var(--cyan);font-weight:600;}
+.td-svc{color:var(--green);}
+.td-proto{color:var(--text-dim);font-size:.69rem;}
+
+.item-list{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.item-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#081218;border:1px solid var(--border);border-radius:2px;border-left:2px solid var(--green-dim);font-size:.74rem;}
+.item-entry:hover{border-left-color:var(--green);}
+.item-url{color:var(--cyan);word-break:break-all;}
+.item-meta{color:var(--text-dim);font-size:.67rem;margin-left:12px;white-space:nowrap;}
+.s200{color:var(--green);}
+.s301,.s302{color:var(--cyan);}
+.s401,.s403{color:var(--amber);}
+
+.sum-count{font-size:.74rem;color:var(--text-dim);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.sum-count .cnt{color:var(--green);font-weight:700;font-size:.84rem;}
+
+.toggle-hdr{cursor:pointer;user-select:none;}
+.toggle-hdr:hover{background:#0f1e2e;}
+.toggle-arrow{margin-left:auto;color:var(--text-dim);transition:transform .2s;}
+.toggle-arrow.open{transform:rotate(90deg);}
+
+pre{background:#040810;border:1px solid var(--border);border-radius:var(--radius);padding:14px;overflow:auto;max-height:450px;font-size:.71rem;color:#6a8aa8;line-height:1.7;white-space:pre-wrap;word-break:break-all;}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(6,10,15,.92);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;}
+.loading-box{background:var(--bg-card);border:1px solid var(--border-glow);border-radius:var(--radius);padding:40px 48px;text-align:center;min-width:360px;box-shadow:0 0 60px #00ff9f18;}
+.loading-spinner{position:relative;width:64px;height:64px;margin:0 auto 20px;}
+.spinner-ring{position:absolute;inset:0;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--green);font-size:1.4rem;text-shadow:var(--glow-g);animation:blink 1.2s ease-in-out infinite;}
+.loading-text{color:var(--cyan);font-size:.82rem;letter-spacing:.08em;margin-bottom:16px;}
+.loading-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:16px;}
+.loading-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:2px;transition:width .4s ease;box-shadow:var(--glow-g);}
+.loading-log{font-size:.67rem;color:var(--text-dim);text-align:left;max-height:80px;overflow:hidden;display:flex;flex-direction:column;gap:3px;}
+.log-ln{animation:fadeUp .2s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+footer{text-align:center;padding:20px;font-size:.67rem;color:var(--text-dim);border-top:1px solid var(--border);margin-top:48px;letter-spacing:.06em;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+.fw{color:var(--amber);}
+.fs{color:var(--border);}
+
+.error-msg{color:var(--red);font-size:.77rem;padding:8px;border:1px solid var(--red-dim);border-radius:var(--radius);background:#ff3b5c0a;}
+.no-data{color:var(--text-dim);font-style:italic;font-size:.74rem;}
+
+@media(max-width:640px){
+  header{padding:14px 16px;}
+  main{padding:20px 12px;}
+  .input-row{flex-direction:column;}
+  .input-wrapper,.btn-group{width:100%;}
+  .btn{flex:1;justify-content:center;}
+  .loading-box{min-width:unset;padding:28px 20px;}
+  .modules-grid{grid-template-columns:repeat(2,1fr);}
+  .export-panel{flex-direction:column;align-items:flex-start;}
+}
+</style>
 </head>
 <body>
 
-<h1>WebRecon</h1>
-<p>Website Security Analyzer</p>
+<div class="scanline"></div>
+<div class="noise"></div>
 
-<input type="text" id="domain" placeholder="example.com">
+<!-- ══ HEADER ══ -->
+<header>
+  <div>
+    <div class="logo">
+      <span class="logo-bracket">[</span><span class="logo-text">SYKNET</span><span class="logo-accent">SCOPE</span><span class="logo-bracket">]</span>
+    </div>
+    <div class="tagline">// Website Security Reconnaissance Platform v1.0</div>
+  </div>
+  <div class="header-right">
+    <div><span class="status-dot"></span>BACKEND ONLINE</div>
+    <div class="clock" id="clock"></div>
+  </div>
+</header>
 
-<div class="buttons">
-    <button onclick="runPassiveScan()">Run Passive Scan</button>
-    <button class="danger" onclick="runActiveScan()">Run Active Scan</button>
-</div>
+<main>
 
-<hr>
+  <!-- ══ SCAN INPUT ══ -->
+  <section class="scan-panel">
+    <div class="terminal-prompt">
+      <span class="prompt-prefix">root@syknet:~$</span>
+      <span class="prompt-cmd"> scan --target</span>
+    </div>
+    <div class="input-row">
+      <div class="input-wrapper">
+        <span class="input-prefix">▶</span>
+        <input type="text" id="domain" placeholder="example.com" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-passive" onclick="runPassiveScan()"><span>◈</span>PASSIVE SCAN</button>
+        <button class="btn btn-active"  onclick="runActiveScan()"><span>◉</span>ACTIVE SCAN</button>
+      </div>
+    </div>
+  </section>
 
-<h2>Passive Recon Results</h2>
-<pre id="passiveResult">No scan performed yet.</pre>
+  <!-- ══ MODULE CARDS ══ -->
+  <section class="modules-section">
+    <div class="modules-header">
+      <div class="modules-title">// <span>Scan Modules</span></div>
+      <div class="modules-divider"></div>
+      <div class="modules-count" id="modCount">15 MODULES</div>
+    </div>
+    <div class="module-tabs">
+      <button class="module-tab tab-all"      onclick="filterMods('all',this)">ALL MODULES</button>
+      <button class="module-tab"              onclick="filterMods('passive',this)">◈ PASSIVE RECON</button>
+      <button class="module-tab"              onclick="filterMods('active',this)">◉ ACTIVE RECON</button>
+    </div>
+    <div class="modules-grid" id="modGrid"></div>
+  </section>
 
-<hr>
+  <!-- ══ RESULTS ══ -->
+  <div id="resultsWrap" class="hidden">
 
-<h2>Active Recon Results</h2>
-<p id="activeStatus">No active scan performed yet.</p>
+    <div class="target-banner">
+      <span class="tb-label">TARGET:</span><span class="tb-domain" id="tbDomain"></span>
+      <span class="tb-sep">|</span>
+      <span class="tb-label">SCAN:</span><span class="tb-type" id="tbType"></span>
+      <span class="tb-sep">|</span>
+      <span class="tb-label">STARTED:</span><span class="tb-time" id="tbTime"></span>
+    </div>
 
-<!-- PORT SCAN -->
-<h3>Open Ports</h3>
-<table id="portsTable">
-    <thead>
-        <tr>
-            <th>Port</th>
-            <th>Protocol</th>
-            <th>Service</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td colspan="3">No data</td>
-        </tr>
-    </tbody>
-</table>
+    <div id="exportPanel" class="export-panel hidden">
+      <div class="export-label">⬇ EXPORT REPORT</div>
+      <div class="export-btns">
+        <button class="btn-export bex-pdf"  onclick="exportPDF()">▣ PDF <span class="export-hint">Print-ready</span></button>
+        <button class="btn-export bex-json" onclick="exportJSON()">{ } JSON <span class="export-hint">Raw data</span></button>
+        <button class="btn-export bex-csv"  onclick="exportCSV()">⊞ CSV <span class="export-hint">Spreadsheet</span></button>
+        <button class="btn-export bex-txt"  onclick="exportTXT()">≡ TXT <span class="export-hint">Plain text</span></button>
+      </div>
+    </div>
 
-<!-- SUBDOMAINS -->
-<h3>Discovered Subdomains</h3>
-<pre id="subdomainResult">No data</pre>
+    <!-- PASSIVE -->
+    <div id="passiveSection" class="hidden">
+      <div id="riskBanner" class="risk-banner hidden">
+        <span>⚠</span><span id="riskLevel" class="risk-level"></span>
+        <span class="risk-sep">—</span><span id="riskFindings"></span>
+      </div>
+      <div class="cards-grid">
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>IP INTELLIGENCE<span class="card-status" id="s-ip"></span></div><div class="card-body" id="b-ip"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>WHOIS LOOKUP<span class="card-status" id="s-whois"></span></div><div class="card-body" id="b-whois"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>DNS RECORDS<span class="card-status" id="s-dns"></span></div><div class="card-body" id="b-dns"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>TLS / SSL<span class="card-status" id="s-tls"></span></div><div class="card-body" id="b-tls"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>HTTP HEADERS<span class="card-status" id="s-headers"></span></div><div class="card-body" id="b-headers"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>EMAIL SECURITY<span class="card-status" id="s-email"></span></div><div class="card-body" id="b-email"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>TECH STACK<span class="card-status" id="s-tech"></span></div><div class="card-body" id="b-tech"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>FIREWALL / WAF<span class="card-status" id="s-fw"></span></div><div class="card-body" id="b-fw"></div></div>
+        <div class="card wide"><div class="card-header"><span class="card-icon">◉</span>THREAT INTELLIGENCE<span class="card-status" id="s-threat"></span></div><div class="card-body" id="b-threat"></div></div>
+        <div class="card wide"><div class="card-header"><span class="card-icon">◈</span>PAGE ANALYSIS<span class="card-status" id="s-page"></span></div><div class="card-body" id="b-page"></div></div>
+        <div class="card wide"><div class="card-header toggle-hdr" onclick="tog('b-raw','ra')"><span class="card-icon">≡</span>RAW JSON<span class="toggle-arrow" id="ra">▶</span></div><div class="card-body hidden" id="b-raw"><pre id="rawJ"></pre></div></div>
+      </div>
+    </div>
 
-<!-- DIRECTORIES -->
-<h3>Discovered Directories</h3>
-<pre id="directoryResult">No data</pre>
+    <!-- ACTIVE -->
+    <div id="activeSection" class="hidden">
+      <div class="cards-grid">
+        <div class="card wide"><div class="card-header"><span class="card-icon">◉</span>PORT SCAN<span class="card-status" id="s-ports"></span></div><div class="card-body" id="b-ports"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>SUBDOMAINS<span class="card-status" id="s-subs"></span></div><div class="card-body" id="b-subs"></div></div>
+        <div class="card"><div class="card-header"><span class="card-icon">◈</span>DIRECTORIES<span class="card-status" id="s-dirs"></span></div><div class="card-body" id="b-dirs"></div></div>
+        <div class="card wide"><div class="card-header"><span class="card-icon">◈</span>API DISCOVERY<span class="card-status" id="s-api"></span></div><div class="card-body" id="b-api"></div></div>
+        <div class="card wide"><div class="card-header toggle-hdr" onclick="tog('b-raw2','ra2')"><span class="card-icon">≡</span>RAW JSON<span class="toggle-arrow" id="ra2">▶</span></div><div class="card-body hidden" id="b-raw2"><pre id="rawJ2"></pre></div></div>
+      </div>
+    </div>
+  </div>
 
-<!-- API DISCOVERY -->
-<h3>API Endpoints</h3>
-<pre id="apiResult">No data</pre>
+  <!-- ══ LOADING ══ -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-box">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <span class="spinner-icon">◈</span>
+      </div>
+      <div class="loading-text" id="loadTxt">Initializing...</div>
+      <div class="loading-bar"><div class="loading-fill" id="loadFill"></div></div>
+      <div class="loading-log" id="loadLog"></div>
+    </div>
+  </div>
 
-<!-- API SUBDOMAIN DISCOVERY -->
-<h3>API Subdomains</h3>
-<pre id="apiSubdomainResult">No data</pre>
+</main>
 
-<script src="script.js"></script>
+<!-- ══ MODAL CONTAINER ══ -->
+<div id="modalWrap"></div>
+
+<footer>
+  <span class="fw">⚠ FOR AUTHORIZED SECURITY TESTING AND EDUCATIONAL USE ONLY</span>
+  <span class="fs">|</span>
+  <span>SyknetScope v1.0</span>
+</footer>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+/* ── IST Clock ── */
+const getIST = () => new Date().toLocaleString("en-IN",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).replace(","," ")+" IST";
+setInterval(()=>{const e=document.getElementById("clock");if(e)e.textContent=getIST();},1000);
+document.getElementById("clock").textContent=getIST();
+
+/* ── Globals ── */
+let lastData=null, lastType=null, lastDomain=null;
+
+/* ── Utils ── */
+const $=id=>document.getElementById(id);
+const esc=s=>{if(typeof s!=="string")s=String(s??"");return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");};
+const fmtBytes=b=>b<1024?b+" B":b<1048576?(b/1024).toFixed(1)+" KB":(b/1048576).toFixed(1)+" MB";
+const getDomain=()=>$("domain").value.trim().replace(/^https?:\/\//,"").split("/")[0];
+
+function kv(k,v,vc=""){
+  if(v===null||v===undefined||v==="")v='<span class="no-data">—</span>';
+  return`<div class="kv-row"><span class="kv-key">${k}</span><span class="kv-val ${vc}">${v}</span></div>`;
+}
+function yn(val,goodTrue=true){
+  if(val===true) return goodTrue?'<span class="v-green">✓ YES</span>':'<span class="v-amber">⚠ YES</span>';
+  if(val===false)return goodTrue?'<span class="v-red">✗ NO</span>':'<span class="v-green">✓ NO</span>';
+  return`<span>${esc(String(val??"—"))}</span>`;
+}
+function setCS(id,txt,cls){const e=$(id);if(!e)return;e.textContent=txt;e.className="card-status "+cls;}
+function errHTML(m){return`<div class="error-msg">⚠ ${esc(m)}</div>`;}
+function tog(bodyId,arrowId){$(bodyId).classList.toggle("hidden");$(arrowId).classList.toggle("open");}
+
+/* ── Loading ── */
+const P_STEPS=["Resolving IP address...","Querying WHOIS...","Fetching DNS records...","Analyzing HTTP headers...","Checking TLS certificate...","Detecting WAF / Firewall...","Scanning tech stack...","Running threat intelligence...","Finalizing results..."];
+const A_STEPS=["Scanning ports 1–1024...","Enumerating subdomains...","Brute-forcing directories...","Detecting API endpoints...","Compiling results..."];
+let loadTmr=null;
+function showLoading(steps){
+  $("loadingOverlay").classList.remove("hidden");
+  $("loadFill").style.width="0%";
+  $("loadLog").innerHTML="";
+  let i=0;
+  function step(){
+    if(i<steps.length){
+      $("loadFill").style.width=Math.round((i+1)/steps.length*90)+"%";
+      $("loadTxt").textContent=steps[i];
+      const ln=document.createElement("div");
+      ln.className="log-ln";ln.textContent="› "+steps[i];
+      $("loadLog").appendChild(ln);$("loadLog").scrollTop=9999;
+      i++;loadTmr=setTimeout(step,800+Math.random()*600);
+    }
+  }
+  step();
+}
+function hideLoading(){
+  clearTimeout(loadTmr);
+  $("loadFill").style.width="100%";
+  setTimeout(()=>$("loadingOverlay").classList.add("hidden"),300);
+}
+
+/* ── Banner ── */
+function showBanner(domain,type){
+  $("resultsWrap").classList.remove("hidden");
+  $("tbDomain").textContent=domain;
+  $("tbType").textContent=type;
+  $("tbTime").textContent=getIST();
+}
+
+/* ─────────────────────────
+   PASSIVE SCAN
+───────────────────────── */
+async function runPassiveScan(){
+  const domain=getDomain();
+  if(!domain){alert("Enter a domain first");return;}
+  lastDomain=domain;lastType="passive";lastData=null;
+  $("exportPanel").classList.add("hidden");
+  $("passiveSection").classList.remove("hidden");
+  $("activeSection").classList.add("hidden");
+  showBanner(domain,"PASSIVE RECON");
+  showLoading(P_STEPS);
+  ["ip","whois","dns","tls","headers","email","tech","fw","threat","page"].forEach(id=>setCS("s-"+id,"SCANNING...","cs-loading"));
+  try{
+    const res=await fetch(`${API}/scan?domain=${encodeURIComponent(domain)}`);
+    const data=await res.json();
+    hideLoading();lastData=data;
+    renderPassive(data);
+    $("exportPanel").classList.remove("hidden");
+  }catch(e){
+    hideLoading();
+    $("b-ip").innerHTML=errHTML("Cannot reach backend. Is uvicorn running on port 8000?");
+  }
+}
+
+function renderPassive(d){
+  renderIP(d.ip_info);
+  renderWhois(d.whois);
+  renderDNS(d.dns_records);
+  renderTLS(d.ssl_chain,d.tls_cipher_suites,d.tls_security_config,d.tls_handshake);
+  renderHeaders(d.http_info);
+  renderEmail(d.email_configuration,d.dns_security);
+  renderTech(d.tech_stack);
+  renderFirewall(d.firewall_detection);
+  renderThreat(d.threat_analysis);
+  renderPage(d.page_analysis);
+  $("rawJ").textContent=JSON.stringify(d,null,2);
+}
+
+function renderIP(d){
+  if(!d)return;
+  if(d.error){$("b-ip").innerHTML=errHTML(d.error);setCS("s-ip","ERROR","cs-err");return;}
+  $("b-ip").innerHTML=[
+    kv("IP Address",`<span class="v-cyan">${esc(d.ip||"—")}</span>`),
+    kv("City",esc(d.city||"—")),kv("Region",esc(d.region||"—")),
+    kv("Country",esc(d.country||"—")),kv("ASN / Org",esc(d.org||"—")),
+    kv("Coordinates",esc(d.location||"—"))
+  ].join("");
+  setCS("s-ip","OK","cs-ok");
+}
+
+function renderWhois(d){
+  if(!d)return;
+  if(d.error){$("b-whois").innerHTML=errHTML(d.error);setCS("s-whois","ERROR","cs-err");return;}
+  const dn=Array.isArray(d.domain_name)?d.domain_name[0]:(d.domain_name||"—");
+  const ns=Array.isArray(d.name_servers)?d.name_servers.join(", "):(d.name_servers||"—");
+  $("b-whois").innerHTML=[
+    kv("Domain",esc(dn)),kv("Registrar",esc(d.registrar||"—")),
+    kv("Created",esc(d.creation_date||"—")),kv("Expires",esc(d.expiration_date||"—")),
+    kv("Updated",esc(d.updated_date||"—")),
+    kv("Name Servers",`<span style="font-size:.7rem">${esc(ns)}</span>`)
+  ].join("");
+  setCS("s-whois","OK","cs-ok");
+}
+
+function renderDNS(d){
+  if(!d)return;
+  let h="";
+  ["A","AAAA","MX","NS","CNAME","TXT"].forEach(t=>{
+    const r=d[t];
+    h+=kv(t,r&&r.length?r.map(x=>`<span class="tag tg-cyan">${esc(x)}</span>`).join(" "):'<span class="no-data">—</span>');
+  });
+  $("b-dns").innerHTML=h;setCS("s-dns","OK","cs-ok");
+}
+
+function renderTLS(chain,ciphers,cfg,hs){
+  let h="";
+  if(chain&&!chain.error){
+    h+=kv("Subject",esc(chain.subject?.commonName||"—"));
+    h+=kv("Issuer",esc(chain.issuer?.organizationName||"—"));
+    h+=kv("Valid From",esc(chain.valid_from||"—"));
+    h+=kv("Valid To",esc(chain.valid_to||"—"));
+    h+=kv("Status",chain.expired?'<span class="v-red">✗ EXPIRED</span>':'<span class="v-green">✓ Valid</span>');
+  }else if(chain?.error)h+=errHTML(chain.error);
+  if(ciphers&&!ciphers.error){
+    h+=kv("Cipher",`<span style="font-size:.7rem">${esc(ciphers.cipher_suite||"—")}</span>`);
+    h+=kv("Protocol",esc(ciphers.protocol||"—"));
+    h+=kv("Key Size",ciphers.key_size?ciphers.key_size+" bits":"—");
+  }
+  if(cfg){
+    const wp=cfg.weak_protocols_supported;
+    h+=kv("Weak Protocols",(wp&&wp.length)?`<span class="v-red">✗ ${esc(wp.join(", "))}</span>`:'<span class="v-green">✓ Secure</span>');
+  }
+  if(hs)h+=kv("Handshake",hs.handshake_successful?`<span class="v-green">✓ ${esc(hs.protocol)}</span>`:'<span class="v-red">✗ Failed</span>');
+  $("b-tls").innerHTML=h||'<span class="no-data">No TLS data</span>';
+  setCS("s-tls",chain?.expired?"EXPIRED":"OK",chain?.expired?"cs-err":"cs-ok");
+}
+
+function renderHeaders(d){
+  if(!d)return;
+  if(d.error){$("b-headers").innerHTML=errHTML(d.error);setCS("s-headers","ERROR","cs-err");return;}
+  const sec=d.security_headers||{};
+  const EXP=["Content-Security-Policy","X-Frame-Options","X-Content-Type-Options","Referrer-Policy","Strict-Transport-Security"];
+  let h=kv("Status Code",String(d.status_code||"—"))+kv("Server",esc(d.server||"Hidden"));
+  h+=`<div style="margin-top:9px;font-size:.66rem;color:var(--text-dim);letter-spacing:.1em;margin-bottom:5px">SECURITY HEADERS</div>`;
+  EXP.forEach(x=>{
+    h+=`<div class="sec-row"><span class="sec-name">${x}</span>${sec[x]?'<span class="v-green">✓ SET</span>':'<span class="v-red">✗ MISSING</span>'}</div>`;
+  });
+  const miss=EXP.filter(x=>!sec[x]).length;
+  $("b-headers").innerHTML=h;
+  setCS("s-headers",miss+" MISSING",miss>0?"cs-warn":"cs-ok");
+}
+
+function renderEmail(em,dns){
+  let h="";
+  if(dns)h+=kv("DNSSEC",dns.dnssec_enabled?'<span class="v-green">✓ Enabled</span>':'<span class="v-red">✗ Disabled</span>');
+  if(em){
+    h+=kv("SPF",em.spf?`<span class="v-green" style="font-size:.7rem">${esc(em.spf)}</span>`:'<span class="v-red">✗ Not configured</span>');
+    h+=kv("DMARC",em.dmarc?`<span class="v-green" style="font-size:.7rem">${esc(em.dmarc)}</span>`:'<span class="v-red">✗ Not configured</span>');
+    h+=kv("DKIM",esc(em.dkim||"—"));
+  }
+  const issues=(!em?.spf?1:0)+(!em?.dmarc?1:0);
+  $("b-email").innerHTML=h||'<span class="no-data">No data</span>';
+  setCS("s-email",issues>0?issues+" ISSUES":"OK",issues>0?"cs-warn":"cs-ok");
+}
+
+function renderTech(d){
+  if(!d||d.error){$("b-tech").innerHTML=d?.error?errHTML(d.error):'<span class="no-data">No tech detected</span>';setCS("s-tech","N/A","cs-warn");return;}
+  const e=Object.entries(d);
+  $("b-tech").innerHTML=e.length?e.map(([c,t])=>kv(esc(c),(Array.isArray(t)?t:[t]).map(x=>`<span class="tag tg-cyan">${esc(x)}</span>`).join(" "))).join(""):'<span class="no-data">None detected</span>';
+  setCS("s-tech",e.length+" FOUND","cs-ok");
+}
+
+function renderFirewall(d){
+  if(!d||d.error){$("b-fw").innerHTML=d?.error?errHTML(d.error):'<span class="no-data">No data</span>';setCS("s-fw","ERROR","cs-err");return;}
+  $("b-fw").innerHTML=d.waf_detected
+    ?kv("WAF Detected",`<span class="v-amber">✓ ${esc(d.provider?.toUpperCase()||"Unknown")}</span>`)
+    :kv("WAF Detected",'<span class="v-green">✗ None detected</span>');
+  setCS("s-fw",d.waf_detected?"WAF FOUND":"NONE",d.waf_detected?"cs-warn":"cs-ok");
+}
+
+function renderThreat(d){
+  if(!d)return;
+  const rc={Low:"v-green",Medium:"v-amber",High:"v-red"};
+  const rb=$("riskBanner");
+  rb.className="risk-banner risk-"+(d.risk_level||"low").toLowerCase();
+  rb.classList.remove("hidden");
+  $("riskLevel").textContent="RISK: "+(d.risk_level||"?").toUpperCase();
+  $("riskFindings").textContent=(d.findings||[]).join(" · ");
+  let h=kv("Risk Level",`<span class="${rc[d.risk_level]||""}" style="font-weight:700">${esc(d.risk_level)}</span>`);
+  (d.findings||[]).forEach(f=>h+=`<div class="kv-row"><span class="kv-key">Finding</span><span class="kv-val ${f.includes("No obvious")?"v-green":"v-amber"}">${esc(f)}</span></div>`);
+  const vt=d.virustotal;
+  if(vt?.enabled&&vt.source){
+    h+=`<div style="margin-top:9px;font-size:.66rem;color:var(--text-dim);letter-spacing:.1em;margin-bottom:5px">VIRUSTOTAL</div>`;
+    h+=kv("Malicious",`<span class="${vt.malicious>0?"v-red":"v-green"}">${vt.malicious}</span>`);
+    h+=kv("Suspicious",`<span class="${vt.suspicious>0?"v-amber":"v-green"}">${vt.suspicious}</span>`);
+    h+=kv("Harmless",String(vt.harmless||0));
+    h+=kv("Reputation",String(vt.reputation||0));
+  }
+  if(d.external_reports){
+    h+=`<div style="margin-top:9px;font-size:.66rem;color:var(--text-dim);letter-spacing:.1em;margin-bottom:5px">EXTERNAL REPORTS</div>`;
+    Object.entries(d.external_reports).forEach(([n,u])=>h+=`<div class="kv-row"><span class="kv-key">${esc(n)}</span><a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--cyan);font-size:.7rem">${esc(u)}</a></div>`);
+  }
+  $("b-threat").innerHTML=h;
+  setCS("s-threat",d.risk_level,d.risk_level==="High"?"cs-err":d.risk_level==="Medium"?"cs-warn":"cs-ok");
+}
+
+function renderPage(d){
+  if(!d||d.error){$("b-page").innerHTML=d?.error?errHTML(d.error):'<span class="no-data">No data</span>';setCS("s-page","ERROR","cs-err");return;}
+  let h="";
+  if(d.quality_metrics){const q=d.quality_metrics;h+=kv("Status Code",String(q.status_code||"—"))+kv("HTTPS",yn(q.https))+kv("Response Time",q.response_time_ms?Math.round(q.response_time_ms)+" ms":"—")+kv("Content Length",q.content_length?fmtBytes(q.content_length):"—");}
+  if(d.site_features){const f=d.site_features;h+=`<div style="margin-top:9px;font-size:.66rem;color:var(--text-dim);letter-spacing:.1em;margin-bottom:5px">FEATURES</div>`;h+=kv("Has Forms",yn(f.has_forms,false))+kv("Has Login",yn(f.has_login,false))+kv("Uses JS",yn(f.uses_javascript))+kv("Has iFrame",yn(f.has_iframe,false));}
+  $("b-page").innerHTML=h;setCS("s-page","OK","cs-ok");
+}
+
+/* ─────────────────────────
+   ACTIVE SCAN
+───────────────────────── */
+async function runActiveScan(){
+  const domain=getDomain();
+  if(!domain){alert("Enter a domain first");return;}
+  if(!confirm("⚠ ACTIVE SCAN WARNING\n\nOnly scan systems you own or have explicit permission to test.\n\nContinue?"))return;
+  lastDomain=domain;lastType="active";lastData=null;
+  $("exportPanel").classList.add("hidden");
+  $("activeSection").classList.remove("hidden");
+  $("passiveSection").classList.add("hidden");
+  showBanner(domain,"ACTIVE RECON");
+  showLoading(A_STEPS);
+  ["ports","subs","dirs","api"].forEach(id=>setCS("s-"+id,"SCANNING...","cs-loading"));
+  try{
+    const res=await fetch(`${API}/active-scan?domain=${encodeURIComponent(domain)}`);
+    const data=await res.json();
+    hideLoading();lastData=data;
+    renderPorts(data.port_scan);
+    renderSubs(data.subdomain_enum);
+    renderDirs(data.directory_enum);
+    renderAPI(data.api_discovery);
+    $("rawJ2").textContent=JSON.stringify(data,null,2);
+    $("exportPanel").classList.remove("hidden");
+  }catch(e){
+    hideLoading();
+    $("b-ports").innerHTML=errHTML("Cannot reach backend. Is uvicorn running on port 8000?");
+  }
+}
+
+function renderPorts(d){
+  if(!d){$("b-ports").innerHTML='<span class="no-data">No data</span>';return;}
+  const ports=d.open_ports||[];
+  let h=`<div class="sum-count">Scanned: <span class="cnt">${esc(d.scan_range||"")}</span> &nbsp;|&nbsp; Open: <span class="cnt">${ports.length}</span></div>`;
+  if(!ports.length){$("b-ports").innerHTML=h+'<span class="no-data">No open ports found</span>';setCS("s-ports","0 OPEN","cs-ok");return;}
+  h+=`<div class="port-wrap"><table><thead><tr><th>PORT</th><th>PROTO</th><th>SERVICE</th></tr></thead><tbody>`;
+  ports.forEach(p=>{h+=`<tr><td class="td-port">${p.port}</td><td class="td-proto">${esc(p.protocol)}</td><td class="td-svc">${esc(p.service)}</td></tr>`;});
+  h+=`</tbody></table></div>`;
+  $("b-ports").innerHTML=h;setCS("s-ports",ports.length+" OPEN",ports.length>5?"cs-warn":"cs-ok");
+}
+
+function renderSubs(d){
+  if(!d){$("b-subs").innerHTML='<span class="no-data">No data</span>';return;}
+  const f=d.found||[];
+  let h=`<div class="sum-count">Tested: <span class="cnt">${d.total_tested}</span> &nbsp;|&nbsp; Found: <span class="cnt">${f.length}</span></div>`;
+  if(!f.length){$("b-subs").innerHTML=h+'<span class="no-data">None found</span>';setCS("s-subs","0 FOUND","cs-ok");return;}
+  h+=`<div class="item-list">`+f.map(s=>`<div class="item-entry"><span class="item-url">${esc(s.subdomain)}</span><span class="item-meta">${esc((s.ips||[]).join(", "))}</span></div>`).join("")+`</div>`;
+  $("b-subs").innerHTML=h;setCS("s-subs",f.length+" FOUND","cs-warn");
+}
+
+function renderDirs(d){
+  if(!d){$("b-dirs").innerHTML='<span class="no-data">No data</span>';return;}
+  const f=d.found||[];
+  let h=`<div class="sum-count">Tested: <span class="cnt">${d.total_tested}</span> &nbsp;|&nbsp; Found: <span class="cnt">${f.length}</span></div>`;
+  if(!f.length){$("b-dirs").innerHTML=h+'<span class="no-data">None found</span>';setCS("s-dirs","0 FOUND","cs-ok");return;}
+  h+=`<div class="item-list">`+f.map(x=>`<div class="item-entry"><span class="item-url" style="font-size:.7rem">${esc(x.url)}</span><span class="item-meta s${x.status_code}">${x.status_code} · ${esc(x.tag||"")}</span></div>`).join("")+`</div>`;
+  $("b-dirs").innerHTML=h;setCS("s-dirs",f.length+" FOUND","cs-warn");
+}
+
+function renderAPI(d){
+  if(!d){$("b-api").innerHTML='<span class="no-data">No data</span>';return;}
+  const f=d.found||[];
+  let h=`<div class="sum-count">Tested: <span class="cnt">${d.total_tested}</span> &nbsp;|&nbsp; Found: <span class="cnt">${f.length}</span></div>`;
+  if(!f.length){$("b-api").innerHTML=h+'<span class="no-data">None found</span>';setCS("s-api","0 FOUND","cs-ok");return;}
+  h+=`<div class="item-list">`+f.map(x=>`<div class="item-entry"><span class="item-url" style="font-size:.7rem">${esc(x.endpoint)}</span><span class="item-meta s${x.status_code}">${x.status_code} · ${esc(x.content_type||"")}</span></div>`).join("")+`</div>`;
+  $("b-api").innerHTML=h;setCS("s-api",f.length+" FOUND","cs-warn");
+}
+
+/* ─────────────────────────
+   EXPORT
+───────────────────────── */
+function exportJSON(){
+  if(!lastData)return;
+  dl(new Blob([JSON.stringify(lastData,null,2)],{type:"application/json"}),`syknet_${lastDomain}_${lastType}.json`);
+}
+function exportCSV(){
+  if(!lastData)return;
+  const rows=[["Section","Key","Value"]];
+  flatCSV(lastData,"",rows);
+  const csv=rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  dl(new Blob([csv],{type:"text/csv"}),`syknet_${lastDomain}_${lastType}.csv`);
+}
+function flatCSV(o,pfx,rows){
+  if(!o||typeof o!=="object")return;
+  for(const[k,v]of Object.entries(o)){
+    const key=pfx?`${pfx} › ${k}`:k;
+    if(Array.isArray(v))rows.push([pfx||"root",k,v.join(" | ")]);
+    else if(v&&typeof v==="object")flatCSV(v,key,rows);
+    else{const p=key.split(" › ");rows.push([p[0],p.slice(1).join(" › ")||k,String(v??"")]);}}
+}
+function exportTXT(){
+  if(!lastData)return;
+  const lines=["═══════════════════════════════════","  SYKNETSCOPE — Recon Report","═══════════════════════════════════",`  Target   : ${lastDomain}`,`  Scan Type: ${lastType.toUpperCase()}`,`  Generated: ${getIST()}`,"═══════════════════════════════════",""];
+  flatTXT(lastData,"",lines);
+  dl(new Blob([lines.join("\n")],{type:"text/plain"}),`syknet_${lastDomain}_${lastType}.txt`);
+}
+function flatTXT(o,ind,lines){
+  if(!o||typeof o!=="object")return;
+  for(const[k,v]of Object.entries(o)){
+    if(Array.isArray(v)){lines.push(`${ind}${k}:`);v.forEach(i=>typeof i==="object"?flatTXT(i,ind+"    ",lines):lines.push(`${ind}  - ${i}`));}
+    else if(v&&typeof v==="object"){lines.push(`${ind}[${k}]`);flatTXT(v,ind+"  ",lines);lines.push("");}
+    else lines.push(`${ind}${k.padEnd(22)}: ${v??"—"}`);
+  }
+}
+function exportPDF(){
+  if(!lastData)return;
+  const domain=lastDomain,type=lastType.toUpperCase(),ist=getIST();
+  const secs=lastType==="passive"?buildPassPDF(lastData):buildActPDF(lastData);
+  const win=window.open("","_blank");
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SyknetScope — ${domain}</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'JetBrains Mono',monospace;background:#fff;color:#111;font-size:11px;padding:32px;}
+  h1{font-size:17px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:4px;}
+  .meta{color:#555;font-size:10px;margin-bottom:22px;}
+  .sec{margin-bottom:18px;page-break-inside:avoid;}
+  .sec-title{background:#111;color:#00ff9f;font-size:10px;font-weight:700;letter-spacing:.1em;padding:4px 10px;margin-bottom:7px;}
+  table{width:100%;border-collapse:collapse;}
+  td{padding:4px 8px;border-bottom:1px solid #eee;vertical-align:top;}
+  td:first-child{color:#555;width:180px;font-size:10px;white-space:nowrap;}
+  .foot{margin-top:28px;border-top:1px solid #ccc;padding-top:8px;font-size:9px;color:#999;}
+  .rL{font-weight:bold;} .rLow{color:green;} .rMed{color:#b85c00;} .rHigh{color:red;}
+  @media print{body{padding:16px;}}</style></head><body>
+  <h1>⬡ SyknetScope — Security Report</h1>
+  <div class="meta">Target: <b>${domain}</b> | ${type} RECON | ${ist}</div>
+  ${secs}
+  <div class="foot">⚠ For authorized security testing and educational use only — SyknetScope v1.0</div>
+  <script>window.onload=()=>window.print();<\/script></body></html>`);
+  win.document.close();
+}
+function pdfSec(title,rows){
+  const trs=rows.filter(r=>r[1]!=null&&r[1]!=="").map(([k,v])=>`<tr><td>${esc(String(k))}</td><td>${v??"—"}</td></tr>`).join("");
+  return`<div class="sec"><div class="sec-title">◈ ${title}</div><table><tbody>${trs}</tbody></table></div>`;
+}
+function buildPassPDF(d){
+  const rl=(d.threat_analysis?.risk_level||"Low");
+  const rc=rl==="High"?"rHigh":rl==="Medium"?"rMed":"rLow";
+  return[
+    pdfSec("IP INTELLIGENCE",[["IP",d.ip_info?.ip],["City/Region",`${d.ip_info?.city||""},${d.ip_info?.region||""}`],["Country",d.ip_info?.country],["Org",d.ip_info?.org]]),
+    pdfSec("WHOIS",[["Domain",d.whois?.domain_name],["Registrar",d.whois?.registrar],["Created",d.whois?.creation_date],["Expires",d.whois?.expiration_date]]),
+    pdfSec("DNS",[["A",(d.dns_records?.A||[]).join(", ")],["MX",(d.dns_records?.MX||[]).join(", ")],["NS",(d.dns_records?.NS||[]).join(", ")],["TXT",(d.dns_records?.TXT||[]).join(" | ")]]),
+    pdfSec("TLS/SSL",[["Subject",d.ssl_chain?.subject?.commonName],["Issuer",d.ssl_chain?.issuer?.organizationName],["Expires",d.ssl_chain?.valid_to],["Protocol",d.tls_cipher_suites?.protocol],["Cipher",d.tls_cipher_suites?.cipher_suite]]),
+    pdfSec("HTTP HEADERS",[["Server",d.http_info?.server||"Hidden"],["CSP",d.http_info?.security_headers?.["Content-Security-Policy"]?"✓ SET":"✗ MISSING"],["HSTS",d.http_info?.security_headers?.["Strict-Transport-Security"]?"✓ SET":"✗ MISSING"],["X-Frame",d.http_info?.security_headers?.["X-Frame-Options"]?"✓ SET":"✗ MISSING"]]),
+    pdfSec("EMAIL",[["DNSSEC",d.dns_security?.dnssec_enabled?"✓ Enabled":"✗ Disabled"],["SPF",d.email_configuration?.spf||"Not configured"],["DMARC",d.email_configuration?.dmarc||"Not configured"]]),
+    pdfSec("THREAT",[["Risk Level",`<span class="rL ${rc}">${rl}</span>`],...(d.threat_analysis?.findings||[]).map((f,i)=>[`Finding ${i+1}`,f]),["VT Malicious",d.threat_analysis?.virustotal?.malicious??0],["VT Suspicious",d.threat_analysis?.virustotal?.suspicious??0]])
+  ].join("");
+}
+function buildActPDF(d){
+  return[
+    pdfSec("OPEN PORTS",(d.port_scan?.open_ports||[]).length?d.port_scan.open_ports.map(p=>[`Port ${p.port}`,`${p.protocol} — ${p.service}`]):[["Result","No open ports found"]]),
+    pdfSec("SUBDOMAINS",(d.subdomain_enum?.found||[]).length?d.subdomain_enum.found.map(s=>[s.subdomain,(s.ips||[]).join(", ")]):[["Result","None found"]]),
+    pdfSec("DIRECTORIES",(d.directory_enum?.found||[]).length?d.directory_enum.found.map(f=>[f.url,`${f.status_code} · ${f.tag||""}`]):[["Result","None found"]]),
+    pdfSec("API ENDPOINTS",(d.api_discovery?.found||[]).length?d.api_discovery.found.map(a=>[a.endpoint,`${a.status_code} · ${a.content_type||""}`]):[["Result","None found"]])
+  ].join("");
+}
+function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+
+/* ─────────────────────────
+   MODULE CARDS
+───────────────────────── */
+const MODS=[
+  {id:"ip",title:"IP Intelligence",icon:"◈",ic:"#00cfff",cat:"passive",label:"Network Layer",
+   desc:"Resolves the target domain to its IPv4 address, then queries the IPInfo API to enrich it with geolocation (city, region, country, coordinates) and ASN/organization data. Reveals who hosts the target, which cloud provider or ISP owns the IP block, and the physical server location.",
+   tags:["DNS Resolution","Geolocation","ASN Lookup","IPInfo API"],
+   out:"ip: 142.250.207.238\ncity: Mumbai · country: IN\norg: AS15169 Google LLC\nloc: 19.07, 72.88"},
+  {id:"whois",title:"WHOIS Lookup",icon:"◈",ic:"#00ff9f",cat:"passive",label:"Domain Registry",
+   desc:"Queries the global WHOIS database for domain registration metadata: registrar name, creation date, expiration date, last updated, and authoritative nameservers. Newly registered domains (under 180 days) are a primary phishing risk indicator.",
+   tags:["Registrar","Creation Date","Expiry","Nameservers","python-whois"],
+   out:"registrar: MarkMonitor, Inc.\ncreated: 1997-09-15 UTC\nexpires: 2028-09-14 UTC\nns: ns1–ns4.google.com"},
+  {id:"dns",title:"DNS Records",icon:"◈",ic:"#00ff9f",cat:"passive",label:"DNS Enumeration",
+   desc:"Resolves all major DNS record types using dnspython. A records give IPs; MX exposes mail servers; NS shows authoritative nameservers; TXT contains SPF/DMARC/verification tokens; CNAME reveals aliases; AAAA covers IPv6. Together they map the full DNS footprint.",
+   tags:["A","AAAA","MX","NS","CNAME","TXT","dnspython"],
+   out:"A: 142.250.207.238\nMX: 10 smtp.google.com.\nTXT: v=spf1 include:_spf.google.com ~all\nNS: ns1–ns4.google.com"},
+  {id:"http",title:"HTTP Headers",icon:"◈",ic:"#00cfff",cat:"passive",label:"Security Headers",
+   desc:"Sends an HTTP GET to the target and inspects response headers. Checks five critical security headers: Content-Security-Policy (XSS mitigation), X-Frame-Options (clickjacking), X-Content-Type-Options (MIME sniffing), Referrer-Policy (data leakage), and Strict-Transport-Security (HTTPS enforcement). Missing headers are flagged.",
+   tags:["CSP","HSTS","X-Frame-Options","Referrer-Policy","Cookies"],
+   out:"server: gws\nX-Frame-Options: SAMEORIGIN ✓\nCSP: ✗ MISSING\nHSTS: ✗ MISSING\nX-Content-Type: ✗ MISSING"},
+  {id:"tls",title:"TLS Analysis",icon:"◈",ic:"#bd5fff",cat:"passive",label:"Cryptographic Security",
+   desc:"Four TLS checks: (1) SSL chain — subject, issuer, validity dates, expiry check. (2) Cipher suite — active cipher name and key size. (3) Weak protocol probe — tests whether SSLv3, TLSv1.0, or TLSv1.1 are accepted. (4) Handshake simulation — confirms connection and captures negotiated protocol version.",
+   tags:["Certificate","Cipher Suite","TLSv1.3","Weak Protocols","Expiry Check"],
+   out:"subject: *.google.com\nissuer: Google Trust Services\nprotocol: TLSv1.3\nweak_protos: none ✓"},
+  {id:"ssl",title:"SSL Check",icon:"◈",ic:"#00ff9f",cat:"passive",label:"Certificate Validation",
+   desc:"Focused SSL health check validating the certificate fully — hostname match, expiry status, days remaining, and human-readable warnings if expiry is within 30 days. Also detects weak protocols on the active connection. Provides a clean pass/fail interface for dashboard indicators.",
+   tags:["Hostname Match","Expiry Days","30-Day Warning","Pass/Fail"],
+   out:"valid: true\ndays_remaining: 37\nprotocol: TLSv1.3\nwarnings: expires soon"},
+  {id:"dnssec",title:"DNS Security",icon:"◈",ic:"#00ff9f",cat:"passive",label:"DNSSEC + Email Auth",
+   desc:"Two DNS security layers: (1) DNSSEC — queries DNSKEY records to confirm the zone is cryptographically signed, protecting against DNS spoofing. (2) Email authentication — retrieves SPF, DMARC (queried at _dmarc.<domain> directly), and DKIM status. Missing configs are primary phishing risk indicators.",
+   tags:["DNSSEC","SPF","DMARC","DKIM","Phishing Risk"],
+   out:"dnssec: disabled\nspf: v=spf1 include:_spf.google.com ~all\ndmarc: v=DMARC1; p=reject"},
+  {id:"threat",title:"Threat Analysis",icon:"◉",ic:"#ff3b5c",cat:"passive",label:"Risk Intelligence",
+   desc:"Heuristic + external threat intelligence scoring (Low / Medium / High). Heuristics: domain age under 180 days, suspicious TLDs (.xyz, .tk, .ml), missing DMARC, expired TLS. Enriched by VirusTotal API — checks how many AV engines flag the domain as malicious.",
+   tags:["Heuristics","VirusTotal","Domain Age","TLD Risk","Risk Score"],
+   out:"risk_level: Medium\nfindings: DMARC not configured\nvt_malicious: 0\nvt_reputation: 422"},
+  {id:"infra",title:"Infra Intelligence",icon:"◈",ic:"#ffa62b",cat:"passive",label:"WAF + Tech Stack",
+   desc:"Two-part infrastructure detection: (1) WAF/Firewall — scans headers and response body for Cloudflare, Akamai, Imperva/Incapsula, and Sucuri signatures. (2) Tech stack — uses the builtwith library to fingerprint CMS, server tech, CDNs, analytics platforms, and JS frameworks from the live response.",
+   tags:["WAF","Cloudflare","builtwith","CMS Detection","CDN"],
+   out:"waf_detected: false\nweb-servers: Google Web Server\ncms: —\nanalytics: Google Analytics"},
+  {id:"page",title:"Page Analysis",icon:"◈",ic:"#00cfff",cat:"passive",label:"Surface Analysis",
+   desc:"Fetches and parses the homepage with BeautifulSoup. Extracts OG/Twitter social meta tags. Detects attack surface features: forms (injection points), login pages, JavaScript usage, iframes. Captures quality metrics: response time, status code, content length, HTTPS status.",
+   tags:["BeautifulSoup","OG Tags","Forms","Login Detection","Response Time"],
+   out:"has_forms: true\nhas_login: true\nuses_js: true\nresponse_time_ms: 1254"},
+  {id:"metrics",title:"Site Metrics",icon:"◈",ic:"#00ff9f",cat:"passive",label:"Health Check",
+   desc:"Lightweight site health check: server status code, HSTS header presence, HTTPS confirmation, server banner, response time in ms, and content length in bytes. Acts as a quick sanity check and feeds dashboard indicator badges. Returns structured status fields (completed / blocked / timeout / error) for clean error handling.",
+   tags:["Status Code","HSTS","Response Time","Content Length","Server Banner"],
+   out:"server_status: 200\nhsts_enabled: true\nresponse_time_ms: 342\nserver: gws"},
+  {id:"ports",title:"Port Scanner",icon:"◉",ic:"#ffa62b",cat:"active",label:"Network Exposure",
+   desc:"TCP connect scan across ports 1–1024 plus MySQL (3306), RDP (3389), and HTTP-alt (8080). Runs with a 300-worker ThreadPoolExecutor at 0.3s timeout for speed. Maps each open port to a service name from a built-in registry of 70+ standard services. Results sorted by port number.",
+   tags:["TCP Connect","300 Threads","1027 Ports","Service Mapping","socket"],
+   out:"port: 80  → http\nport: 443 → https\nport: 22  → ssh\ntotal_open: 3"},
+  {id:"subs",title:"Subdomain Enum",icon:"◉",ic:"#ffa62b",cat:"active",label:"Attack Surface",
+   desc:"DNS-based subdomain brute-force using a curated 34-entry wordlist covering the most commonly exposed subdomains (www, api, mail, dev, staging, admin, vpn, cdn, auth, graphql, etc.). Resolves A records concurrently with 25 threads. Returns FQDN and all IP addresses per discovered subdomain.",
+   tags:["DNS Brute-force","A Record","34 Wordlist","25 Threads","dnspython"],
+   out:"www.google.com → 142.251.x.x\napi.google.com → 142.250.x.x\nmail.google.com → 142.251.x.x\nfound: 11"},
+  {id:"dirs",title:"Directory Enum",icon:"◉",ic:"#ffa62b",cat:"active",label:"Path Discovery",
+   desc:"HTTP directory brute-force against both HTTP/HTTPS schemes using 39 high-value paths: admin panels, login pages, config files (.env, config.php), backups, WordPress paths (wp-admin, xmlrpc.php), Git repos (.git/config), and API endpoints. Responses with status 200/301/302/401/403 are recorded and tagged by category.",
+   tags:["HTTP Brute-force","39 Paths","Status Filter","Path Classification","20 Threads"],
+   out:"/robots.txt  → 200 public\n/wp-admin    → 301 wordpress\n/.env        → 403 config\nfound: 8"},
+  {id:"api",title:"API Discovery",icon:"◉",ic:"#ffa62b",cat:"active",label:"Endpoint Detection",
+   desc:"Heuristic detection of REST, GraphQL, and OpenAPI endpoints across 16 common paths (api/v1, api/v2, graphql, swagger, openapi.json, v3/api-docs, etc.) on both HTTP and HTTPS. Filters by Content-Type to confirm JSON responses. Detects Swagger UI and OpenAPI docs that expose full API schemas.",
+   tags:["REST","GraphQL","OpenAPI","Swagger","Content-Type Filter"],
+   out:"/api/v1 → 200 application/json\n/graphql → 200 graphql\n/swagger.json → 401\nfound: 2"},
+];
+
+function renderMods(filter="all"){
+  const grid=$("modGrid");
+  const list=filter==="all"?MODS:MODS.filter(m=>m.cat===filter);
+  $("modCount").textContent=list.length+" MODULES";
+  grid.innerHTML=list.map((m,i)=>{
+    const isP=m.cat==="passive";
+    return`<div class="module-card ${isP?"mc-passive":"mc-active"}" style="animation-delay:${i*.04}s" onclick="openMod('${m.id}')">
+      <div class="mc-sweep"></div>
+      <div class="mc-top">
+        <span class="mc-icon" style="color:${m.ic}">${m.icon}</span>
+        <span class="mc-badge ${isP?"mcb-passive":"mcb-active"}">${isP?"PASSIVE":"ACTIVE"}</span>
+      </div>
+      <div class="mc-title">${m.title}</div>
+      <div class="mc-label">${m.label}</div>
+    </div>`;
+  }).join("");
+}
+
+function filterMods(cat,btn){
+  document.querySelectorAll(".module-tab").forEach(t=>{t.className="module-tab";});
+  if(cat==="all")    btn.classList.add("tab-all");
+  if(cat==="passive")btn.classList.add("tab-passive");
+  if(cat==="active") btn.classList.add("tab-active-r");
+  renderMods(cat);
+}
+
+function openMod(id){
+  const m=MODS.find(x=>x.id===id);if(!m)return;
+  const isP=m.cat==="passive";
+  const mw=$("modalWrap");
+  mw.innerHTML=`
+  <div class="modal-overlay" onclick="closeMod(event,this)">
+    <div class="modal-box ${isP?"modal-passive":"modal-active"}">
+      <div class="mc-br tl"></div><div class="mc-br tr"></div>
+      <div class="mc-br bl"></div><div class="mc-br br"></div>
+      <button class="modal-close" onclick="closeModBtn()">✕ ESC</button>
+      <div class="modal-head">
+        <span class="modal-icon-big" style="color:${m.ic}">${m.icon}</span>
+        <div class="modal-head-text">
+          <div class="modal-title">${m.title}</div>
+          <span class="modal-badge-pill ${isP?"mbp-passive":"mbp-active"}">${isP?"◈ PASSIVE RECON":"◉ ACTIVE RECON"}</span>
+        </div>
+      </div>
+      <div class="modal-div"></div>
+      <div class="mlabel">// PURPOSE &amp; FUNCTION</div>
+      <div class="modal-desc">${m.desc}</div>
+      <div class="modal-tags">${m.tags.map(t=>`<span class="m-tag">${t}</span>`).join("")}</div>
+      <div class="mlabel">// SAMPLE OUTPUT</div>
+      <div class="modal-out${isP?"":" amber"}">${m.out}</div>
+    </div>
+  </div>`;
+}
+
+function closeMod(e,overlay){if(e.target===overlay)closeModBtn();}
+function closeModBtn(){$("modalWrap").innerHTML="";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModBtn();});
+
+/* init */
+renderMods("all");
+</script>
 </body>
 </html>

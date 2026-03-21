@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+import traceback
 
 from passive_recon.ip_info import get_ip_info
 from passive_recon.whois_lookup import get_whois_info
@@ -32,55 +34,85 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ─────────────────────────────────────────────
+#  TIMEOUT WRAPPER
+#  Runs any function with a hard time limit.
+#  Returns {"status":"timeout"} if it exceeds
+#  the limit instead of hanging forever.
+# ─────────────────────────────────────────────
+_executor = ThreadPoolExecutor(max_workers=20)
+
+def safe_call(fn, *args, timeout=12, label="module"):
+    """
+    Call fn(*args) with a hard timeout.
+    Returns structured error dict on failure/timeout
+    instead of crashing or hanging the whole scan.
+    """
+    try:
+        future = _executor.submit(fn, *args)
+        return future.result(timeout=timeout)
+    except FuturesTimeout:
+        return {"status": "timeout", "error": f"{label} timed out after {timeout}s"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @app.get("/")
 def home():
-    return {"message": "WebRecon backend is running 🚀"}
+    return {"message": "SyknetScope backend is running 🚀"}
+
 
 @app.get("/scan")
 def full_scan(domain: str):
     domain = domain.replace("https://", "").replace("http://", "").strip("/")
 
+    # Run shared data once — used by multiple modules
+    whois_data  = safe_call(get_whois_info,  domain, timeout=10, label="whois")
+    ssl_chain   = safe_call(get_ssl_chain,   domain, timeout=8,  label="ssl_chain")
+    dns_records = safe_call(get_dns_records, domain, timeout=8,  label="dns_records")
+
     return {
         "target": domain,
 
         # Passive OSINT
-        "ip_info": get_ip_info(domain),
-        "whois": get_whois_info(domain),
-        "dns_records": get_dns_records(domain),
-        "http_info": get_http_headers(domain),
-        "crawl_rules": get_crawl_rules(domain),
-        "redirect_chain": get_redirect_chain(domain),
-        "security_txt": get_security_txt(domain),
-        "page_analysis": analyze_page(domain),
+        "ip_info":        safe_call(get_ip_info,         domain, timeout=8,  label="ip_info"),
+        "whois":          whois_data,
+        "dns_records":    dns_records,
+        "http_info":      safe_call(get_http_headers,    domain, timeout=10, label="http_headers"),
+        "crawl_rules":    safe_call(get_crawl_rules,     domain, timeout=6,  label="crawl_rules"),
+        "redirect_chain": safe_call(get_redirect_chain,  domain, timeout=8,  label="redirects"),
+        "security_txt":   safe_call(get_security_txt,    domain, timeout=6,  label="security_txt"),
+        "page_analysis":  safe_call(analyze_page,        domain, timeout=12, label="page_analysis"),
 
-        # DNS & Infra Intelligence
-        "dns_security": check_dnssec(domain),
-        "email_configuration": get_email_security(domain),
-        "firewall_detection": detect_firewall(domain),
-        "tech_stack": get_tech_stack(domain),
-        "archive_history": get_archive_history(domain),
-        "global_ranking": get_global_ranking(domain),
+        # DNS & Infra
+        "dns_security":        safe_call(check_dnssec,       domain, timeout=6,  label="dnssec"),
+        "email_configuration": safe_call(get_email_security, domain, timeout=8,  label="email_security"),
+        "firewall_detection":  safe_call(detect_firewall,    domain, timeout=10, label="firewall"),
+        "tech_stack":          safe_call(get_tech_stack,     domain, timeout=15, label="tech_stack"),
+        "archive_history":     safe_call(get_archive_history,domain, timeout=8,  label="archive"),
+        "global_ranking":      safe_call(get_global_ranking, domain, timeout=5,  label="ranking"),
 
-        # TLS Analysis
-        "ssl_chain": get_ssl_chain(domain),
-        "tls_cipher_suites": get_tls_ciphers(domain),
-        "tls_security_config": tls_security_config(domain),
-        "tls_handshake": tls_handshake_simulation(domain),
-        "threat_analysis": threat_analysis(domain,get_whois_info(domain),get_ssl_chain(domain),get_dns_records(domain)
-)
+        # TLS
+        "ssl_chain":          ssl_chain,
+        "tls_cipher_suites":  safe_call(get_tls_ciphers,          domain, timeout=8,  label="tls_ciphers"),
+        "tls_security_config": safe_call(tls_security_config,     domain, timeout=10, label="tls_config"),
+        "tls_handshake":      safe_call(tls_handshake_simulation,  domain, timeout=8,  label="tls_handshake"),
 
+        # Threat
+        "threat_analysis": safe_call(
+            threat_analysis, domain, whois_data, ssl_chain, dns_records,
+            timeout=15, label="threat_analysis"
+        ),
     }
+
 
 @app.get("/active-scan")
 def active_scan(domain: str):
     domain = domain.replace("https://", "").replace("http://", "").strip("/")
     return {
-        "target": domain,
-        "active_recon": {
-            "port_scan": port_scan(domain),
-            "subdomain_enum": subdomain_enum(domain),
-            "directory_enum": dir_enum(domain),
-            "api_discovery": api_discovery(domain)
-        }
+        "target":         domain,
+        "port_scan":      safe_call(port_scan,      domain, timeout=60, label="port_scan"),
+        "subdomain_enum": safe_call(subdomain_enum, domain, timeout=30, label="subdomain_enum"),
+        "directory_enum": safe_call(dir_enum,       domain, timeout=40, label="dir_enum"),
+        "api_discovery":  safe_call(api_discovery,  domain, timeout=20, label="api_discovery"),
     }
-
