@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SyknetScope — Web Recon</title>
+<title>SkynetScope — Web Recon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -320,7 +320,7 @@ footer{text-align:center;padding:20px;font-size:.67rem;color:var(--text-dim);bor
 <header>
   <div>
     <div class="logo">
-      <span class="logo-bracket">[</span><span class="logo-text">SYKNET</span><span class="logo-accent">SCOPE</span><span class="logo-bracket">]</span>
+      <span class="logo-bracket">[</span><span class="logo-text">SKYNET</span><span class="logo-accent">SCOPE</span><span class="logo-bracket">]</span>
     </div>
     <div class="tagline">// Website Security Reconnaissance Platform v1.0</div>
   </div>
@@ -775,7 +775,7 @@ function flatCSV(o,pfx,rows){
 }
 function exportTXT(){
   if(!lastData)return;
-  const lines=["═══════════════════════════════════","  SYKNETSCOPE — Recon Report","═══════════════════════════════════",`  Target   : ${lastDomain}`,`  Scan Type: ${lastType.toUpperCase()}`,`  Generated: ${getIST()}`,"═══════════════════════════════════",""];
+  const lines=["═══════════════════════════════════","  SKYNETSCOPE — Recon Report","═══════════════════════════════════",`  Target   : ${lastDomain}`,`  Scan Type: ${lastType.toUpperCase()}`,`  Generated: ${getIST()}`,"═══════════════════════════════════",""];
   flatTXT(lastData,"",lines);
   dl(new Blob([lines.join("\n")],{type:"text/plain"}),`syknet_${lastDomain}_${lastType}.txt`);
 }
@@ -792,7 +792,7 @@ function exportPDF(){
   const domain=lastDomain,type=lastType.toUpperCase(),ist=getIST();
   const secs=lastType==="passive"?buildPassPDF(lastData):buildActPDF(lastData);
   const win=window.open("","_blank");
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SyknetScope — ${domain}</title>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SkynetScope — ${domain}</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'JetBrains Mono',monospace;background:#fff;color:#111;font-size:11px;padding:32px;}
   h1{font-size:17px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:4px;}
@@ -805,7 +805,7 @@ function exportPDF(){
   .foot{margin-top:28px;border-top:1px solid #ccc;padding-top:8px;font-size:9px;color:#999;}
   .rL{font-weight:bold;} .rLow{color:green;} .rMed{color:#b85c00;} .rHigh{color:red;}
   @media print{body{padding:16px;}}</style></head><body>
-  <h1>⬡ SyknetScope — Security Report</h1>
+  <h1>⬡ SkynetScope — Security Report</h1>
   <div class="meta">Target: <b>${domain}</b> | ${type} RECON | ${ist}</div>
   ${secs}
   <div class="foot">⚠ For authorized security testing and educational use only — SyknetScope v1.0</div>
